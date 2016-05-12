@@ -1,0 +1,164 @@
+#! /bin/bash
+
+# Set this client id to the value you get by registering a twitch api app
+# at https://www.twitch.tv/kraken/oauth2/clients/new
+CLIENT_ID=<add id here>
+
+# For use with xfce-genmon click action,
+# change to suit your terminal emulator
+GUITERM="urxvt -e bash -i -c"
+
+#  |   scroll down
+#  |   to the next
+# \ /  arrow
+#  v
+
+offlineIcon="iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBI
+WXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4AUMECIwxetUFgAAAbRJREFUOMvFk79O22AUxc/9/tgm
+RqGArAYVRSJDtwisSkiMFX6CSiy8A08AI7xKFiSeAOgCY6SoYxlqHEQQsU2H4OLY/m6HSlWE3HbI
+0DNe3Xt079HvEjNjHgnMKfW6cErkFcAxEQXM3CaiiJnPNXC0xzx+3U+zJ/SIPpKUZxtB4Hq+r23P
+Qz4e47HfL8LLy2euqk/7zJ9rDU6JvFLKrx8ODt4oY1A+PYGrCmWSQLdaKIzBl17vu6qq97Ob/M6g
+BE42gsCVZYkijrHo+1ja2cHi1hYm/T5EluHd5majAI7rQyTa9XxfT66uIF5eUIYhipsbmNEITrOJ
+H4MBltbWLCIKakNk5ra9uopJkmCaJFBxDHIcmDQF399DMEMrBWZu1xoQUZQPhx1nZQUUx0AYgoh+
+DRJBuC7yJAERRfUnMF+MB4Op2+1CSwlLKdhaw1IKWkrYrRbSu7spM5/XGijg8Nv1dZblORa2t6GX
+l+E0GlDNJuxOB89ZhocoyjRw9HcOhDjrdLuNt+vr1oJlYZKmGEXRdHh7m7Exf+ZglsRSiBMCdo0x
+bSFExMCFMubwnyT+l2ea2+AnCLnOGqTzpW8AAAAASUVORK5CYII="
+
+onlineIcon="iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBI
+WXMAAA3XAAAN1wFCKJt4AAAAB3RJTUUH4AUMECQTMdaC4gAAAb9JREFUOMvFk0FLG1EUhc99b94k
+YxqNxMHUJoGOEMFkW4pQEdHuSyH/pDtd6i/ozyhIN90p3VvEhSWl1pIyVq1GM41NJpmZzLvdlSDT
+usiiZ3m5HM49fJeYGeNIYEwZdwel+rytI71FktY55jJJcjnmXaHE5umbr627+zR6wqMXj1eFEjvF
+upOpOVU1ly7gfPADR18+Rmc7zZ6O9Muzt833iQal+rwN4Hjl1fMcALSCa2gw/HYPU/kpxByj8frw
+J4DKaJI/HehIbxfrTmbIQ1wGLSzln2DVfoZqaREXh98RDAPMLBcmdKS3EjsgSWs1p6oOPhxgciGH
+k24TRAQv9GBOp9Dev8Lk4rRJktYTDTjm8mzaRng9wI13haASQKYkwpsBfLcL1gxhSnDM5b8lcL/1
+Tp2UbSFsB/CbtwARwAwyBIy0xOCyD5LkJnLAMe8df/ocPqzNQSiCsAzIjAFhGRCKYBUz6J50Qo55
+N9FAKLFx8c71e8M+Ck+LSOXTUA8UVNZEdiGHqBPituH5QonNezmYWS5MZCs507AU+i0fvxpe2Dlq
++//kYJREANsA1nSky0IJF8AegI17SfwvzzS2wW93y8v0/0eosgAAAABJRU5ErkJggg=="
+
+declare -a channels
+declare -A map
+declare -A unmap
+
+function isLive
+{
+    curl -s -H "Accept: application/vnd.twitchtv.v2+json" -H "Client-ID: $CLIENT_ID" -X GET "https://api.twitch.tv/kraken/streams/$channel" | grep -c "{\"stream\":{\"_id\":"
+}
+
+function track
+{
+    short="$1"
+    channel="$2"
+    map["$short"]="$channel"
+    unmap["$channel"]="$short"
+
+    if [ "$(echo "${channels[@]}" | grep -c "$channel")" == 0 ]; then
+	#echo "$channel not in array, adding"
+	channels=(${channels[@]} $channel)
+    fi
+}
+
+#  |   
+#  |   Documentation
+# \ /  
+#  v
+#
+# You can add channels you would like to track. You can
+# use a shorthand for channels so you don't need to
+# type the full channel name to start watching them.
+# Just add a track line for every shorthand 
+# you want to add.
+# The last one you add will be displayed on the
+# online/offline overview
+#
+# -> track <shorthand> <channel>
+# example: track hmh handmade_hero
+#          track hero handmade_hero
+#          track allen mr4thdimention
+#
+# Usage: twitch - show online/offline overview
+#        twitch <channel/shorthand> - play with livestreamer at quality best
+#        twitch <channel/shorthand> <quality> - play with livestreamer at quality <quality>
+#        twitch --livecheck-xfce-genmon - output that can be used in xfce4-genmon
+#              http://goodies.xfce.org/projects/panel-plugins/xfce4-genmon-plugin
+#
+# Internal: twitch --livecheck-channel <channel> - Check if a channel is live, output formatted string
+#           twitch --livecheck-channel-boolean <channel> - Check if a channel is live, output 0/1
+#
+# Dependencies: coreutils, findutils, curl, grep, livestreamer
+#
+
+# !Don't forget to set your CLIENT_ID up top!
+
+#  |   Add your tracks
+#  |   below this
+# \ /  arrow
+#  v  
+
+track hero handmade_hero
+track hmh handmade_hero
+track allen mr4thdimention
+
+##################################################################
+# Don't edit below this line unless you know what you are doing  #
+##################################################################
+
+if [ "$1" == "--livecheck-channel" ]; then
+    channel="$2"
+    if [ "$(isLive "$channel")" == 1 ]; then
+	status="\e[32monline\e[0m"
+    else
+	status="\e[31moffline\e[0m"
+    fi
+    echo -e "$channel(${unmap["$channel"]}) is [$status]"
+    exit
+elif [ "$1" == "--livecheck-channel-boolean" ]; then
+    channel="$2"
+    isLive "$channel"
+    exit
+elif [ "$1" == "--livecheck-xfce-genmon" ]; then
+    channelLive="0";
+    for b in $(echo "${channels[@]}" | xargs -n1 -P0 bin/twitch --livecheck-channel-boolean); do
+	if [ "$b" == "1" ]; then
+	    channelLive="1"
+	fi
+    done
+    
+    if [ "$channelLive" == "1" ]; then
+	if [ ! -f /tmp/twitch-online.png ]; then
+	    echo "$onlineIcon" | base64 --decode > /tmp/twitch-online.png
+	fi
+	echo "<img>/tmp/twitch-online.png</img>"
+    else
+	if [ ! -f /tmp/twitch-offline.png ]; then
+	    echo "$offlineIcon" | base64 --decode > /tmp/twitch-offline.png
+	fi
+	echo "<img>/tmp/twitch-offline.png</img>"
+    fi
+    echo "<tool>Click to show all tracked channels</tool>"
+    echo "<click>$GUITERM 'twitch | less -R'</click>"
+    exit
+fi
+if [ -z "$1" ]; then
+    echo "${channels[@]}" | xargs -n1 -P0 "twitch" --livecheck-channel
+else
+    if [ -n "${map[$1]}" ]; then
+        channel="${map[$1]}"
+    else
+	channel="$1"
+    fi
+
+    if [ -n "$2" ]; then
+	quality="$2"
+    else
+	quality="best"
+    fi
+    
+    echo "Querying twitch api for stream status, will start stream as soon as it is up!"
+    channelLive="$(isLive "$channel")"
+    while [ "$channelLive" == 0 ]; do
+	sleep 5
+	channelLive="$(isLive "$channel")"
+    done
+    echo "Stream is up now! Trying to start the player"
+    livestreamer "twitch.tv/$channel" "$quality"
+fi
