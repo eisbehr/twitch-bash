@@ -1,5 +1,6 @@
 # twitch-bash
 
+```
 Usage: twitch - show online/offline overview
        twitch <channel/shorthand> - play with livestreamer at quality best
        twitch <channel/shorthand> <quality> - play with livestreamer at quality <quality>
@@ -23,7 +24,7 @@ online/offline overview
 example: track hmh handmade_hero
          track hero handmade_hero
          track allen mr4thdimention
-
+```
 # License
 This software is considered to be in the public domain by the author and all contributors.
 If release into the public domain is not possible in your country, an equivalent usage permission is granted.
