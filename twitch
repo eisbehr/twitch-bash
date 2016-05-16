@@ -2,10 +2,9 @@
 
 # Set this client id to the value you get by registering a twitch api app
 # at https://www.twitch.tv/kraken/oauth2/clients/new
-CLIENT_ID=<add id here>
+CLIENT_ID="<client id>"
 
-# For use with xfce-genmon click action,
-# change to suit your terminal emulator
+# For use with xfce-genmon click action
 GUITERM="urxvt -e bash -i -c"
 
 #  |   scroll down
@@ -39,9 +38,28 @@ declare -a channels
 declare -A map
 declare -A unmap
 
+function fetchApiResponse
+{
+    channel="$1"
+    curl -s -H "Accept: application/vnd.twitchtv.v2+json" -H "Client-ID: $CLIENT_ID" -X GET "https://api.twitch.tv/kraken/streams/$channel"
+}
+
 function isLive
 {
-    curl -s -H "Accept: application/vnd.twitchtv.v2+json" -H "Client-ID: $CLIENT_ID" -X GET "https://api.twitch.tv/kraken/streams/$channel" | grep -c "{\"stream\":{\"_id\":"
+    apiResponse="$1"
+    echo "$apiResponse" | grep -c "{\"stream\":{\"_id\":"
+}
+
+function gameName
+{
+    apiResponse="$1"
+    echo "$apiResponse" | grep -o -e "\"game\":\"[^\"]\+\"" | grep -o -m 1 -e ".*" | cut -d: -f 2 | cut -d\" -f 2
+}
+
+function streamTitle
+{
+    apiResponse="$1"
+    echo "$apiResponse" | grep -o -e "\"status\":\"[^\"]\+\"" | cut -d: -f2 | cut -d\" -f2
 }
 
 function track
@@ -104,16 +122,21 @@ track allen mr4thdimention
 
 if [ "$1" == "--livecheck-channel" ]; then
     channel="$2"
-    if [ "$(isLive "$channel")" == 1 ]; then
+    apiResponse="$(fetchApiResponse "$channel")"
+    if [ "$(isLive "$apiResponse")" == 1 ]; then
 	status="\e[32monline\e[0m"
-    else
-	status="\e[31moffline\e[0m"
+	playing="and playing $(gameName "$apiResponse")"
+	title="($(streamTitle "$apiResponse"))"
+	echo -e "$channel(${unmap["$channel"]}) is [$status] $playing $title"
+#    else
+#	status="\e[31moffline\e[0m"
     fi
-    echo -e "$channel(${unmap["$channel"]}) is [$status]"
+#    echo -e "$channel(${unmap["$channel"]}) is [$status] $playing $title"
     exit
 elif [ "$1" == "--livecheck-channel-boolean" ]; then
     channel="$2"
-    isLive "$channel"
+    apiResponse="$(fetchApiResponse "$channel")"
+    isLive "$apiResponse"
     exit
 elif [ "$1" == "--livecheck-xfce-genmon" ]; then
     channelLive="0";
@@ -154,10 +177,12 @@ else
     fi
     
     echo "Querying twitch api for stream status, will start stream as soon as it is up!"
-    channelLive="$(isLive "$channel")"
+    apiResponse="$(fetchApiResponse "$channel")"
+    channelLive="$(isLive "$apiResponse")"
     while [ "$channelLive" == 0 ]; do
 	sleep 5
-	channelLive="$(isLive "$channel")"
+	apiResponse="$(fetchApiResponse "$channel")"
+	channelLive="$(isLive "$apiResponse")"
     done
     echo "Stream is up now! Trying to start the player"
     livestreamer "twitch.tv/$channel" "$quality"
