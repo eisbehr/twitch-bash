@@ -2,7 +2,7 @@
 
 # Set this client id to the value you get by registering a twitch api app
 # at https://www.twitch.tv/kraken/oauth2/clients/new
-CLIENT_ID="<client id>"
+CLIENT_ID=""
 
 # For use with xfce-genmon click action
 GUITERM="urxvt -e bash -i -c"
@@ -86,23 +86,25 @@ function track
 # Just add a track line for every shorthand 
 # you want to add.
 # The last one you add will be displayed on the
-# online/offline overview
+# online channel overview
 #
 # -> track <shorthand> <channel>
 # example: track hmh handmade_hero
 #          track hero handmade_hero
 #          track allen mr4thdimention
 #
-# Usage: twitch - show online/offline overview
+# Usage: twitch - show online channel overview
 #        twitch <channel/shorthand> - play with livestreamer at quality best
 #        twitch <channel/shorthand> <quality> - play with livestreamer at quality <quality>
 #        twitch --livecheck-xfce-genmon - output that can be used in xfce4-genmon
+#        twitch --livecheck-xfce-genmon --display-number - also display the number of online channels *very ugly* (requires optional dependency imagemagick)
 #              http://goodies.xfce.org/projects/panel-plugins/xfce4-genmon-plugin
 #
 # Internal: twitch --livecheck-channel <channel> - Check if a channel is live, output formatted string
 #           twitch --livecheck-channel-boolean <channel> - Check if a channel is live, output 0/1
 #
 # Dependencies: coreutils, findutils, curl, grep, livestreamer
+# Optional dependency: imagemagick (to display number in xfce4-genmon)
 #
 
 # !Don't forget to set your CLIENT_ID up top!
@@ -139,25 +141,32 @@ elif [ "$1" == "--livecheck-channel-boolean" ]; then
     isLive "$apiResponse"
     exit
 elif [ "$1" == "--livecheck-xfce-genmon" ]; then
-    channelLive="0";
-    for b in $(echo "${channels[@]}" | xargs -n1 -P0 bin/twitch --livecheck-channel-boolean); do
+    channelLive=0;
+    for b in $(echo "${channels[@]}" | xargs -n1 -P0 twitch --livecheck-channel-boolean); do
 	if [ "$b" == "1" ]; then
-	    channelLive="1"
+	    channelLive=$(($channelLive+1))
 	fi
     done
     
-    if [ "$channelLive" == "1" ]; then
+    if [ "$channelLive" != "0" ]; then
 	if [ ! -f /tmp/twitch-online.png ]; then
 	    echo "$onlineIcon" | base64 --decode > /tmp/twitch-online.png
 	fi
+	if [ "$2" == "--display-number" ]; then
+	    if [ ! -f /tmp/twitch-online-annotated-"$channelLive".png ]; then
+		convert /tmp/twitch-online.png -pointsize 20 -fill black -annotate +0+16 "$channelLive" /tmp/twitch-online-annotated-"$channelLive".png
+	    fi
+	echo "<img>/tmp/twitch-online-annotated-$channelLive.png</img>"
+	else
 	echo "<img>/tmp/twitch-online.png</img>"
+	fi
     else
 	if [ ! -f /tmp/twitch-offline.png ]; then
 	    echo "$offlineIcon" | base64 --decode > /tmp/twitch-offline.png
 	fi
 	echo "<img>/tmp/twitch-offline.png</img>"
     fi
-    echo "<tool>Click to show all tracked channels</tool>"
+    echo "<tool>Click to show online tracked channels</tool>"
     echo "<click>$GUITERM 'twitch | less -R'</click>"
     exit
 fi
