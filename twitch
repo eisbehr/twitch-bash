@@ -104,7 +104,7 @@ function track
 #           twitch --livecheck-channel-boolean <channel> - Check if a channel is live, output 0/1
 #
 # Dependencies: coreutils, findutils, curl, grep, livestreamer
-# Optional dependency: imagemagick (to display number in xfce4-genmon)
+# Optional dependency: less (for xfce4-genmon), imagemagick (to display number in xfce4-genmon)
 #
 
 # !Don't forget to set your CLIENT_ID up top!
@@ -142,7 +142,7 @@ elif [ "$1" == "--livecheck-channel-boolean" ]; then
     exit
 elif [ "$1" == "--livecheck-xfce-genmon" ]; then
     channelLive=0;
-    for b in $(echo "${channels[@]}" | xargs -n1 -P0 twitch --livecheck-channel-boolean); do
+    for b in $(echo "${channels[@]}" | xargs -n1 -P0 "$0" --livecheck-channel-boolean); do
 	if [ "$b" == "1" ]; then
 	    channelLive=$(($channelLive+1))
 	fi
@@ -171,7 +171,7 @@ elif [ "$1" == "--livecheck-xfce-genmon" ]; then
     exit
 fi
 if [ -z "$1" ]; then
-    echo "${channels[@]}" | xargs -n1 -P0 "twitch" --livecheck-channel
+    echo "${channels[@]}" | xargs -n1 -P0 "$0" --livecheck-channel
 else
     if [ -n "${map[$1]}" ]; then
         channel="${map[$1]}"

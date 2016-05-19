@@ -25,7 +25,7 @@ Internal: twitch --livecheck-channel <channel> - Check if a channel is live, out
           twitch --livecheck-channel-boolean <channel> - Check if a channel is live, output 0/1
 
 Dependencies: coreutils, findutils, curl, grep, livestreamer
-Optional dependency: imagemagick (to display number in xfce4-genmon)
+Optional dependency: less (for xfce4-genmon), imagemagick (to display number in xfce4-genmon)
 ```
 # License
 This software is considered to be in the public domain by the author and all contributors.
